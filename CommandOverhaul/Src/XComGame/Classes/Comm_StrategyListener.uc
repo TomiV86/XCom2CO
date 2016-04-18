@@ -1,4 +1,7 @@
-class Comm_StrategyListener extends UIScreenListener dependson(Comm_XComGameState_CommMod);
+class Comm_StrategyListener extends UIScreenListener dependson(Comm_XComGameState_CommMod) config(GameData);;
+
+var config int	MissionMinDuration;
+var config int	MissionMaxDuration;
 
 var() private array<X2ItemTemplate> arrProcessedAmmoTypes;
 var() private bool DoInitOnce;
@@ -154,4 +157,144 @@ static function bool HasBeenProcessed(X2ItemTemplate Comparison, array<X2ItemTem
 DefaultProperties
 {
 	DoInitOnce = false;
+}
+
+static function X2DataTemplate CreateGuerrillaOp()
+{
+	local X2TechTemplate Template;
+	local ArtifactCost Resources;
+
+	`CREATE_X2TEMPLATE(class'X2TechTemplate', Template, 'CommGuerrillaOp');
+	Template.PointsToComplete = 1500;
+	Template.SortingTier = 1;
+	Template.strImage = "img:///UILibrary_StrategyImages.ResearchTech.TECH_PlasmaRifle";
+	Template.ResearchCompletedFn = MissionTechCompleted;
+
+	Template.bRepeatable = true;
+	//Template.ResearchCompletedFn = GiveRandomItemReward;
+
+	// Randomized Item Rewards
+	//Template.ItemRewards.AddItem('LightPoweredArmor');
+
+	// Requirements
+	//Template.Requirements.RequiredTechs.AddItem('Tech_Elerium');
+
+	// Cost
+	Resources.ItemTemplateName='Supplies';
+	Resources.Quantity = 100;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	Resources.ItemTemplateName = 'Intel';
+	Resources.Quantity = 40;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	return Template;
+}
+
+static function X2DataTemplate CreateSupplyRaid()
+{
+	local X2TechTemplate Template;
+	local ArtifactCost Resources;
+
+	`CREATE_X2TEMPLATE(class'X2TechTemplate', Template, 'CommSupplyRaid');
+	Template.PointsToComplete = 1000;
+	Template.SortingTier = 1;
+	Template.strImage = "img:///UILibrary_StrategyImages.ResearchTech.TECH_PlasmaRifle";
+	Template.ResearchCompletedFn = MissionTechCompleted;
+
+	Template.bRepeatable = true;
+	//Template.ResearchCompletedFn = GiveRandomItemReward;
+
+	// Randomized Item Rewards
+	//Template.ItemRewards.AddItem('LightPoweredArmor');
+
+	// Requirements
+	//Template.Requirements.RequiredTechs.AddItem('Tech_Elerium');
+
+	// Cost
+	Resources.ItemTemplateName='Supplies';
+	Resources.Quantity = 40;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	Resources.ItemTemplateName = 'Intel';
+	Resources.Quantity = 30;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	return Template;
+}
+
+static function X2DataTemplate CreateCouncilMission()
+{
+	local X2TechTemplate Template;
+	local ArtifactCost Resources;
+
+	`CREATE_X2TEMPLATE(class'X2TechTemplate', Template, 'CommCouncilMission');
+	Template.PointsToComplete = 1200;
+	Template.SortingTier = 1;
+	Template.strImage = "img:///UILibrary_StrategyImages.ResearchTech.TECH_PlasmaRifle";
+	Template.ResearchCompletedFn = MissionTechCompleted;
+
+	Template.bRepeatable = true;
+	//Template.ResearchCompletedFn = GiveRandomItemReward;
+
+	// Randomized Item Rewards
+	//Template.ItemRewards.AddItem('LightPoweredArmor');
+
+	// Requirements
+	//Template.Requirements.RequiredTechs.AddItem('Tech_Elerium');
+
+	// Cost
+	Resources.ItemTemplateName='Supplies';
+	Resources.Quantity = 75;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	Resources.ItemTemplateName = 'Intel';
+	Resources.Quantity = 40;
+	Template.Cost.ResourceCosts.AddItem(Resources);
+
+	return Template;
+}
+
+function MissionTechCompleted(XComGameState NewGameState, XComGameState_Tech TechState)
+{
+	local XComGameStateHistory History;
+	local XComGameState_HeadquartersXCom XComHQ;
+	local XComGameState_HeadquartersResistance ResistanceHQ;
+	local int IntelAmount, TechID;
+	local XComGameState_MissionSite MissionState;
+	local XComGameState_WorldRegion RegionState;
+	local XComGameState_Reward MissionRewardState;
+	local X2RewardTemplate RewardTemplate;
+	local X2StrategyElementTemplateManager StratMgr;
+	local X2MissionSourceTemplate MissionSource;
+	local array<XComGameState_Reward> MissionRewards;
+	local float MissionDuration;
+
+	History = `XCOMHISTORY;
+
+	switch (TechState.GetMyTemplateName())
+	{
+		case 'CommGuerrillaOp':
+			StratMgr = class'X2StrategyElementTemplateManager'.static.GetStrategyElementTemplateManager();
+
+			MissionRewards.Length = 0;
+			RewardTemplate = X2RewardTemplate(StratMgr.FindStrategyElementTemplate('Reward_None'));
+			MissionRewardState = RewardTemplate.CreateInstanceFromTemplate(NewGameState);
+			NewGameState.AddStateObject(MissionRewardState);
+			MissionRewards.AddItem(MissionRewardState);
+
+			MissionState = XComGameState_MissionSite(NewGameState.CreateStateObject(class'XComGameState_MissionSite'));
+			NewGameState.AddStateObject(MissionState);
+			RegionState = class'UIUtilities_Strategy'.static.GetRandomContinent(SelectedDestinationEntity.Continent).GetRandomRegionInContinent());
+			MissionSource = X2MissionSourceTemplate(StratMgr.FindStrategyElementTemplate('MissionSource_SupplyRaid'));
+			MissionDuration = float((default.MissionMinDuration + `SYNC_RAND_STATIC(default.MissionMaxDuration - default.MissionMinDuration + 1)) * 3600);
+			MissionState.BuildMission(MissionSource, RegionState.GetRandom2DLocationInRegion(), RegionState.GetReference(), MissionRewards, true, true, , MissionDuration);
+			MissionState.PickPOI(NewGameState);
+			break;
+		case 'CommSupplyRaid':
+			break;
+		case 'CommCouncilMission':
+			break;
+	}
+
 }
